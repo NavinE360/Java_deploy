@@ -13,42 +13,10 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
-
+      
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build with Maven
-      run: mvn -B package --file pom.xml
-
-    - name: Copy artifact to staging directory
-      run: mkdir staging && cp target/*.jar staging
-
-    - name: Build and analyze
-      env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=java-app -Dsonar.projectName='java app'
-
-    - name: Publish Artifacts    
-      uses: actions/upload-artifact@v4
-      with:
-        name: Package
-        path: staging
-
-    # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
-    - name: Update dependency graph
-      uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
-deploy:
+ 
+ deploy:
     runs-on: self-hosted  # Run on your self-hosted runner
     needs: build
     steps:
@@ -70,17 +38,17 @@ deploy:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: 'ap-south-1'
+        aws-region: 'ap-northeast-1'
         
     - name: Set up SSH private key
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/tok.pem
-        chmod 600 ~/.ssh/tok.pem  # Set appropriate permissions for the private key
+        echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/nav18.pem
+        chmod 600 ~/.ssh/nav18.pem  # Set appropriate permissions for the private key
 
     - name: Ensure target directory exists on EC2
       run: |
-        ssh -i ~/.ssh/tok.pem ubuntu@ip-172-31-6-43 << 'EOF'
+        ssh -i ~/.ssh/nav18.pem ubuntu@ip-18-181-84-207 << 'EOF'
           # Ensure /home/ubuntu/app directory exists
           sudo mkdir -p /home/ubuntu/app
           sudo chown ubuntu:ubuntu /home/ubuntu/app  # Give ownership to the ubuntu user
@@ -95,9 +63,9 @@ deploy:
         # Copy the artifact to EC2 instance using scp with the private key
         #scp -i ~/.ssh/tok.pem -r artifact/* ubuntu@ip-172-31-6-43:/home/ubuntu/app
         #scp -i ~/.ssh/tok.pem -r artifact/* ubuntu@ip-172-31-6-43:/home/ubuntu/app
-        scp -i ~/.ssh/tok.pem -r * ubuntu@ip-172-31-6-43:/home/ubuntu/app
+        scp -i ~/.ssh/nav18.pem -r * ubuntu@ip-18-181-84-207:/home/ubuntu/app
         # SSH into the EC2 instance to install dependencies and start the app
-        ssh -i ~/.ssh/tok.pem ubuntu@ip-172-31-6-43 << 'EOF'
+        ssh -i ~/.ssh/nav18.pem ubuntu@ip-18-181-84-207 << 'EOF'
           cd /home/ubuntu/app
        
         EOF
